@@ -48,10 +48,10 @@ def search_jackett(imdb_id, search_string):
             r_imdb = str(i["Imdb"])
             r_title = normalize_string(i["Title"])
             magnet_uri = i["MagnetUri"]
-            filters_4k = [search_string, "H265", "2160p"]
+            filters_4k = [search_string, "265", "2160p"]
             if r_imdb in imdb_id and all([x in r_title for x in filters_4k]):
                 uhd.append(Jackett(r_title, magnet_uri))
-            filters_hd = [search_string, "H264", "1080p"]
+            filters_hd = [search_string, "1080p"]
             if r_imdb in imdb_id and all([x in r_title for x in filters_hd]):
                 hd.append(Jackett(r_title, magnet_uri))
             filters_sd = [search_string]
