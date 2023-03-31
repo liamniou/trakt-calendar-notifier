@@ -18,7 +18,7 @@ class Show:
     def __post_init__(self):
         self.s = f"S0{self.s}" if self.s < 10 else f"S{self.s}"
         self.e = f"E0{self.e}" if self.e < 10 else f"E{self.e}"
-        self.tg_message = f"{self.title} {self.s}{self.e} ({self.imdb})"
+        self.tg_message = f"{self.title} {self.s}{self.e} \\({self.imdb}\\)"
 
 
 def get_oncoming_items(subpath="my/shows"):
