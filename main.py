@@ -13,16 +13,12 @@ class Show:
     imdb: str
     s: int
     e: int
-    search_link: str = ""
     tg_message: str = ""
 
     def __post_init__(self):
         self.s = f"S0{self.s}" if self.s < 10 else f"S{self.s}"
         self.e = f"E0{self.e}" if self.e < 10 else f"E{self.e}"
-        self.search_link = (
-            f"https://rarbg.to/torrentshow.php?search={self.imdb}+{self.s}{self.e}"
-        )
-        self.tg_message = f"[🔎]({self.search_link})"
+        self.tg_message = f"{self.title} {self.s}{self.e} ({self.imdb})"
 
 
 def get_oncoming_items(subpath="my/shows"):
