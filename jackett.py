@@ -1,6 +1,7 @@
 import httpx
 import json
 import sys
+import time
 from dataclasses import dataclass
 from typing import Optional
 from config import JACKETT_API_KEY
@@ -15,47 +16,47 @@ class Jackett:
     magnet_uri: Optional[str] = None
 
 
-def normalize_string(string):
-    return (
-        str(string)
-        .replace(".", " ")
-        .replace("-", " ")
-        .replace("(", "\\(")
-        .replace(")", "\\)")
-        .replace("[", "\\[")
-        .replace("]", "\\]")
-    )
-
-
-def search_jackett(imdb_id, search_string):
-    print(f"Looking for {imdb_id} {search_string}")
+def query_api(imdb_id, search_string):
     with httpx.Client() as client:
         r = client.get(
-            f"{BASE_URL}/all/results?apikey={JACKETT_API_KEY}&Query={imdb_id}%20{search_string}&Tracker%5B%5D=rarbg",
+            f"{BASE_URL}/all/results?apikey={JACKETT_API_KEY}&Query={imdb_id}%20{search_string}&_={time.time()}",
             timeout=60,
         )
         if r.status_code != 200:
             print("Something went wrong")
             sys.exit(1)
 
-        results = json.loads(r.text)["Results"]
+        return json.loads(r.text)["Results"]
 
-        uhd = []
-        hd = []
-        sd = []
 
-        for i in results:
-            r_imdb = str(i["Imdb"])
-            r_title = normalize_string(i["Title"])
-            magnet_uri = i["MagnetUri"]
-            filters_4k = [search_string, "265", "2160p"]
-            if r_imdb in imdb_id and all([x in r_title for x in filters_4k]) and "Atmos DV" not in r_title:
+def search_jackett(show_title, imdb_id, search_string):
+    print(f"Looking for {imdb_id} {search_string}")
+    imdb_results = query_api(imdb_id, search_string)
+    print(f"Looking for {show_title} {search_string}")
+    name_results = query_api(show_title, search_string)
+
+    results = imdb_results + name_results
+    unique_results = [i for n, i in enumerate(results) if i not in results[n + 1 :]]
+    sorted_unique_results = sorted(
+        unique_results, key=lambda k: k["Seeders"], reverse=True
+    )
+
+    uhd = []
+    hd = []
+    sd = []
+
+    for i in sorted_unique_results:
+        r_imdb = str(i["Imdb"])
+        r_title = i["Title"]
+        magnet_uri = i["MagnetUri"] if i["MagnetUri"] else i["Details"]
+        if r_imdb in imdb_id or f"{show_title} {search_string}" in r_title.replace(
+            ".", " "
+        ):
+            if "2160p" in r_title:
                 uhd.append(Jackett(r_title, magnet_uri))
-            filters_hd = [search_string, "1080p"]
-            if r_imdb in imdb_id and all([x in r_title for x in filters_hd]):
+            elif "1080p" in r_title:
                 hd.append(Jackett(r_title, magnet_uri))
-            filters_sd = [search_string]
-            if r_imdb in imdb_id and all([x in r_title for x in filters_sd]):
+            else:
                 sd.append(Jackett(r_title, magnet_uri))
 
-        return uhd, hd, sd
+    return uhd, hd, sd

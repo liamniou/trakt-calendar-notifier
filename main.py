@@ -18,7 +18,31 @@ class Show:
     def __post_init__(self):
         self.s = f"S0{self.s}" if self.s < 10 else f"S{self.s}"
         self.e = f"E0{self.e}" if self.e < 10 else f"E{self.e}"
-        self.tg_message = f"*{self.title}* `{self.s}{self.e} {self.imdb}`"
+        self.tg_message = (
+            f"*{normalize_string(self.title)}* `{self.s}{self.e} {self.imdb}`"
+        )
+
+
+def normalize_string(string):
+    return (
+        str(string)
+        .replace(".", " ")
+        .replace("-", " ")
+        .replace("(", "\\(")
+        .replace(")", "\\)")
+        .replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace("!", "\\!")
+    )
+
+
+def normalize_title(item, show):
+    return normalize_string(
+        item.title.replace(show.title, "")
+        .replace(show.s, "")
+        .replace(show.e, "")
+        .strip()
+    )
 
 
 def get_oncoming_items(subpath="my/shows"):
@@ -35,6 +59,7 @@ def get_oncoming_items(subpath="my/shows"):
             f"https://api.trakt.tv/calendars/{subpath}/{today}/1",
             headers=headers,
         )
+        print(r.text)
         if r.status_code == 200:
             return json.loads(r.text)
         else:
@@ -61,15 +86,21 @@ def main():
             show["episode"]["season"],
             show["episode"]["number"],
         )
+        r = send_tg_message(
+            config.CHAT_ID,
+            normalize_string(f"{show.title} {show.s} {show.e} released today"),
+        )
 
-        uhd, hd, sd = search_jackett(show.imdb, f"{show.s}{show.e}")
+        uhd, hd, sd = search_jackett(show.title, show.imdb, f"{show.s}{show.e}")
+        parsed_download_links = 0
         for item in uhd[:2]:
-            show.tg_message += f"\n*{item.title.replace(show.title, '').replace(show.s, '').replace(show.e, '').strip()}* `{item.magnet_uri}`"
-        for item in hd[:2]:
-            show.tg_message += f"\n*{item.title.replace(show.title, '').replace(show.s, '').replace(show.e, '').strip()}* `{item.magnet_uri}`"
-        if not uhd and not hd:
-            for item in sd[:2]:
-                show.tg_message += f"\n*{item.title.replace(show.title, '').replace(show.s, '').replace(show.e, '').strip()}* `{item.magnet_uri}`"
+            show.tg_message += f"\n*{normalize_title(item, show)}* `{item.magnet_uri}`"
+            parsed_download_links += 1
+        for item in hd[: 4 - parsed_download_links]:
+            show.tg_message += f"\n*{normalize_title(item, show)}* `{item.magnet_uri}`"
+            parsed_download_links += 1
+        for item in sd[: 4 - parsed_download_links]:
+            show.tg_message += f"\n*{normalize_title(item, show)}* `{item.magnet_uri}`"
         print(show.tg_message)
         r = send_tg_message(config.CHAT_ID, show.tg_message)
         print(r)
