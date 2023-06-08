@@ -49,14 +49,15 @@ def search_jackett(show_title, imdb_id, search_string):
         r_imdb = str(i["Imdb"])
         r_title = i["Title"]
         magnet_uri = i["MagnetUri"] if i["MagnetUri"] else i["Details"]
-        if r_imdb in imdb_id or f"{show_title} {search_string}" in r_title.replace(
-            ".", " "
-        ):
-            if "2160p" in r_title:
-                uhd.append(Jackett(r_title, magnet_uri))
-            elif "1080p" in r_title:
-                hd.append(Jackett(r_title, magnet_uri))
-            else:
-                sd.append(Jackett(r_title, magnet_uri))
+        if search_string in r_title:
+            if r_imdb in imdb_id or f"{show_title} {search_string}" in r_title.replace(
+                ".", " "
+            ):
+                if "2160p" in r_title:
+                    uhd.append(Jackett(r_title, magnet_uri))
+                elif "1080p" in r_title:
+                    hd.append(Jackett(r_title, magnet_uri))
+                else:
+                    sd.append(Jackett(r_title, magnet_uri))
 
     return uhd, hd, sd
